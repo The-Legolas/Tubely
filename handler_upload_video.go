@@ -136,7 +136,13 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	url := cfg.getObjectURL(key)
 	video.VideoURL = &url
-
+	/*
+		videoV2, err := cfg.dbVideoToSignedVideo(video)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't generate presigned URL", err)
+			return
+		}
+	*/
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error updating video", err)
@@ -206,3 +212,36 @@ func processVideoForFastStart(filePath string) (string, error) {
 
 	return outputfile, nil
 }
+
+/*
+	func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
+		client := s3.NewPresignClient(s3Client)
+		httpRequest, err := client.PresignGetObject(
+			context.Background(),
+			&s3.GetObjectInput{Bucket: aws.String(bucket), Key: aws.String(key)},
+			s3.WithPresignExpires(expireTime),
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate presigned URL: %w", err)
+		}
+		return httpRequest.URL, nil
+	}
+
+	func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error) {
+		if video.VideoURL == nil {
+			return video, nil
+		}
+		url := strings.Split(*video.VideoURL, ",")
+		if len(url) != 2 {
+			return video, nil
+		}
+		bucket := url[0]
+		key := url[1]
+		presignedURL, err := generatePresignedURL(cfg.s3Client, bucket, key, 5*time.Minute)
+		if err != nil {
+			return video, fmt.Errorf("Error generating url: %w", err)
+		}
+		video.VideoURL = &presignedURL
+		return video, nil
+	}
+*/
